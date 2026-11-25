@@ -1,22 +1,31 @@
 import json
 from pathlib import Path
 
-from database import check_connection, fetch_parcels_by_land_use
-from exchange import build_feature_collection, validate_feature_collection
+from database import check_connection
+from pipeline import ParcelPipeline
 
-OUTPUT_PATH = Path("output/")
+OUTPUT = Path(__file__).resolve().parents[1] / "output" / "residential_parcels.geojson"
 
 def main():
-    # 1. Confirm Python can reach PostgreSQL/PostGIS.
-        if not check_connection():
-            return
+    # Confirm Python can reach PostgreSQL/PostGIS.
+    if not check_connection():
+        print("Cannot continue. Database connection failed.")
+        return
+
+    # Retrieve selected database rows.
+    pipeline = ParcelPipeline("Residential")
+    first = pipeline.run()
+    second = pipeline.run()
+
+    print("[3] Feature count: ", len(first["features"]))
+    print("[4] Same result: ", first == second)
+    if first["features"]:
+        print("[5] First parcel: ", first["features"][0]["id"])
+
+    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    OUTPUT.write_text(json.dumps(first, indent=2), encoding="utf-8")
+    print(f"[6] Wrote Output saved:", OUTPUT.exists(), OUTPUT)
     
-        # 2. Retrieve selected database rows.
-        rows = fetch_parcels_by_land_use("Residential")
-        print("Rows returned:", len(rows))
-    
-        if rows:
-            print("First database row:", rows[0])
 
 if __name__ == "__main__":
     main()
