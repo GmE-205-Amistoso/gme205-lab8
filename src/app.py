@@ -2,16 +2,16 @@ import json
 import psycopg
 from flask import Flask, Response, request
 from pipeline import ParcelPipeline
+from ogc_services import handle_wms, handle_wfs
 
 app = Flask(__name__)
 ALLOWED_USES = {"Residential", "Commercial", "Industrial"}
 
 @app.get("/health")
 def health():
-    """Health check endpoint."""
     return {"status": "ok", "service": "GmE 205 Lab 8"}
 
-@app.get("/parcels")
+@app.get("/api/parcels")
 def parcels():
     land_use = request.args.get("land_use", "Residential")
     
@@ -31,6 +31,18 @@ def parcels():
         json.dumps(collection),
         mimetype="application/geo+json",
     )
+
+@app.get("/wms")
+def wms():
+    data = ParcelPipeline("Residential").run()
+    body, mime, status = handle_wms(request.args, request.base_url, data)
+    return Response(body, status=status, content_type=mime)
+
+@app.get("/wfs")
+def wfs():
+    data = ParcelPipeline("Residential").run()
+    body, mime, status = handle_wfs(request.args, request.base_url, data)
+    return Response(body, status=status, content_type=mime)
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=False)
